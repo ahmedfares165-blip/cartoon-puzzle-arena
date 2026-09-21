@@ -1,4 +1,7 @@
-const socket = io();
+const nativeApp = window.Capacitor?.isNativePlatform?.() === true;
+const socket = io(nativeApp ? 'https://cartoon-puzzle-arena-ck2n.onrender.com' : undefined, {
+  transports: ['websocket', 'polling']
+});
 const el = id => document.getElementById(id); let room, isHost=false, order, selected, moves=0, clock;
 const toast = text => { el('toast').textContent=text; el('toast').classList.add('show'); setTimeout(()=>el('toast').classList.remove('show'),3400); };
 function shuffled(){ let a=[...Array(25).keys()]; do { a.sort(()=>Math.random()-.5); } while(a.every((v,i)=>v===i)); return a; }
