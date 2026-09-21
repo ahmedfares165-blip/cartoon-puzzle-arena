@@ -27,11 +27,14 @@ io.on('connection', socket => {
     const room = rooms.get(String(code || '').toUpperCase());
     if (!room) return socket.emit('room-error', 'الغرفة غير موجودة.');
     room.players.set(socket.id, { name: String(name || 'لاعب').slice(0, 20), finished: false });
-    socket.join(room.code); io.to(room.code).emit('room-update', publicRoom(room)); socket.emit('room-ready', publicRoom(room));
+    socket.join(room.code);
     if (!room.startedAt && room.players.size >= 2) {
       room.startedAt = Date.now();
       io.to(room.code).emit('game-start', publicRoom(room));
+    } else {
+      socket.emit('room-ready', publicRoom(room));
     }
+    io.to(room.code).emit('room-update', publicRoom(room));
   });
   socket.on('finish', ({ moves, seconds }) => {
     const code = [...socket.rooms].find(x => rooms.has(x)), room = rooms.get(code);
