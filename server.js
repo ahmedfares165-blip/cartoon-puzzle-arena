@@ -36,6 +36,7 @@ io.on('connection', socket => {
   socket.on('start-room', () => {
     const code = [...socket.rooms].find(x => rooms.has(x)), room = rooms.get(code);
     if (!room || room.hostId !== socket.id || room.startedAt) return;
+    if (room.players.size < 2) return socket.emit('room-error', 'يجب دخول لاعب آخر قبل بدء المباراة.');
     room.startedAt = Date.now();
     io.to(room.code).emit('game-start', publicRoom(room));
   });
