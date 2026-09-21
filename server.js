@@ -14,7 +14,7 @@ app.get('/health', (_, res) => res.status(200).json({ ok: true }));
 function publicRoom(room) {
   return { code: room.code, image: room.image, startedAt: room.startedAt, started: Boolean(room.startedAt), players: [...room.players.values()].map(p => ({ name: p.name })) };
 }
-function makeCode() { return Math.random().toString(36).slice(2, 7).toUpperCase(); }
+function makeCode() { return String(Math.floor(100000 + Math.random() * 900000)); }
 
 io.on('connection', socket => {
   socket.on('create-room', ({ name }) => {

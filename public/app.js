@@ -9,6 +9,6 @@ function start(data){ room=data; el('lobby').hidden=true;el('game').hidden=false
 function updatePlayers(data){el('players').textContent=`👥 ${data.players.map(p=>p.name).join('، ')}`}
 function validName(){const name=el('name').value.trim();if(!name){toast('اكتب اسمك أولاً');return null}return name}
 el('create').onclick=()=>{const name=validName();if(name)socket.emit('create-room',{name})};
-el('join').onclick=()=>{const name=validName(),code=el('code').value.trim();if(!code){toast('اكتب رمز الغرفة');return}if(name)socket.emit('join-room',{name,code})};
+el('join').onclick=()=>{const name=validName(),code=el('code').value.replace(/\D/g,'');if(code.length!==6){toast('رمز الغرفة يتكون من 6 أرقام');return}if(name)socket.emit('join-room',{name,code})};
 el('leave').onclick=()=>location.reload();
 socket.on('room-ready',start);socket.on('game-start',start);socket.on('room-update',data=>{if(data.started && (!room || !room.started)) start(data); else updatePlayers(data)});socket.on('room-error',toast);socket.on('winner',r=>{clearInterval(clock);el('board').style.pointerEvents='none';el('winnerName').textContent=r.winner;el('winnerStats').textContent=`${format(r.seconds)} • ${r.moves} حركة`;el('winnerModal').hidden=false});
