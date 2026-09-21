@@ -1,6 +1,7 @@
 const socket = io('https://cartoon-puzzle-arena-ck2n.onrender.com', {
   transports: ['websocket', 'polling']
 });
+const playerToken=sessionStorage.getItem('puzzle-player-token')||(crypto.randomUUID?.()||`${Date.now()}-${Math.random()}`);sessionStorage.setItem('puzzle-player-token',playerToken);
 const el = id => document.getElementById(id); let room, isHost=false, order, selected, moves=0, clock;
 const toast = text => { el('toast').textContent=text; el('toast').classList.add('show'); setTimeout(()=>el('toast').classList.remove('show'),3400); };
 function shuffled(){ let a=[...Array(25).keys()]; do { a.sort(()=>Math.random()-.5); } while(a.every((v,i)=>v===i)); return a; }
@@ -8,12 +9,14 @@ function draw(){ const b=el('board'); b.innerHTML=''; order.forEach((piece, i)=>
 function tap(index){ if(selected===undefined){ selected=index; draw(); return; } if(selected===index){selected=undefined;draw();return;} [order[selected],order[index]]=[order[index],order[selected]]; selected=undefined;moves++;el('moves').textContent=`${moves} حركة`;draw(); if(order.every((v,i)=>v===i)){ clearInterval(clock); socket.emit('finish',{moves,seconds:Math.floor((Date.now()-room.startedAt)/1000)}); }}
 function format(seconds){return `${String(Math.floor(seconds/60)).padStart(2,'0')}:${String(seconds%60).padStart(2,'0')}`}
 function start(data){ if(data.isHost!==undefined)isHost=data.isHost; room=data; el('lobby').hidden=true;el('game').hidden=false;el('roomCode').textContent=`غرفة ${room.code}`; updatePlayers(room); if(!room.started){el('waiting').hidden=false;el('puzzleArea').hidden=true;el('shareCode').textContent=room.code;el('startGame').hidden=!isHost;return;} el('waiting').hidden=true;el('puzzleArea').hidden=false; order=shuffled();moves=0;selected=undefined;el('reference').style.backgroundPosition=`${room.image%4/3*100}% ${Math.floor(room.image/4)/3*100}%`;draw();clearInterval(clock);clock=setInterval(()=>el('timer').textContent=format(Math.max(0,Math.floor((Date.now()-room.startedAt)/1000))),250); }
-function updatePlayers(data){const names=data.players.map(p=>p.name);el('players').textContent=`👥 ${names.length}/4`;el('waitingCount').textContent=`المتصلون: ${names.length} من 4`;el('waitingPlayers').innerHTML=names.map((name,i)=>`<span>${i===0?'👑':'●'} ${escapeHtml(name)}</span>`).join('');if(isHost&&!data.started){el('startGame').disabled=names.length<2;el('startGame').textContent=names.length<2?'بانتظار لاعب آخر':'ابدأ اللعبة الآن'}}
+function updatePlayers(data){const connected=data.players.filter(p=>p.connected);el('players').textContent=`👥 ${connected.length}/4`;el('waitingCount').textContent=`المتصلون: ${connected.length} من 4`;el('waitingPlayers').innerHTML=data.players.map((p,i)=>`<span class="${p.connected?'':'offline'}">${i===0?'👑':p.connected?'●':'↻'} ${escapeHtml(p.name)}${p.connected?'':' (يعيد الاتصال)'}</span>`).join('');if(isHost&&!data.started){el('startGame').disabled=connected.length<2;el('startGame').textContent=connected.length<2?'بانتظار لاعب آخر':'ابدأ اللعبة الآن'}}
 function escapeHtml(text){const div=document.createElement('div');div.textContent=text;return div.innerHTML}
 function validName(){const name=el('name').value.trim();if(!name){toast('اكتب اسمك أولاً');return null}return name}
-el('create').onclick=()=>{if(!socket.connected)return toast('جاري الاتصال بالخادم، حاول بعد لحظات');const name=validName();if(name)socket.emit('create-room',{name})};
-el('join').onclick=()=>{if(!socket.connected)return toast('جاري الاتصال بالخادم، حاول بعد لحظات');const name=validName(),code=el('code').value.replace(/\D/g,'');if(code.length!==6){toast('رمز الغرفة يتكون من 6 أرقام');return}if(name)socket.emit('join-room',{name,code})};
+el('create').onclick=()=>{if(!socket.connected)return toast('جاري الاتصال بالخادم، حاول بعد لحظات');const name=validName();if(name)socket.emit('create-room',{name,token:playerToken})};
+el('join').onclick=()=>{if(!socket.connected)return toast('جاري الاتصال بالخادم، حاول بعد لحظات');const name=validName(),code=el('code').value.replace(/\D/g,'');if(code.length!==6){toast('رمز الغرفة يتكون من 6 أرقام');return}if(name)socket.emit('join-room',{name,code,token:playerToken})};
 el('leave').onclick=()=>location.reload();
 el('startGame').onclick=()=>socket.emit('start-room');
 socket.on('room-ready',start);socket.on('game-start',start);socket.on('room-update',data=>{if(data.started && (!room || !room.started)) start(data); else updatePlayers(data)});socket.on('room-error',toast);socket.on('winner',r=>{clearInterval(clock);el('board').style.pointerEvents='none';el('winnerName').textContent=r.winner;el('winnerStats').textContent=`${format(r.seconds)} • ${r.moves} حركة`;el('winnerModal').hidden=false});
 socket.on('connect_error',()=>toast('تعذر الاتصال بالخادم. تحقق من الإنترنت وحاول مجدداً.'));
+socket.on('connect',()=>{if(room)socket.emit('rejoin-room',{code:room.code,token:playerToken})});
+socket.on('room-lost',()=>{toast('انتهت الغرفة. أنشئ غرفة جديدة.');setTimeout(()=>location.reload(),1800)});
