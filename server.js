@@ -6,7 +6,7 @@ const app = express();
 const server = app.listen(process.env.PORT || 3000, () => console.log('Puzzle Arena started'));
 const io = new Server(server, { cors: { origin: '*' } });
 const rooms = new Map();
-const images = Array.from({ length: 18 }, (_, i) => `toon-${i + 1}`);
+const images = Array.from({ length: 16 }, (_, i) => i);
 
 app.use(express.static(path.join(__dirname, 'public')));
 app.get('/health', (_, res) => res.status(200).json({ ok: true }));
