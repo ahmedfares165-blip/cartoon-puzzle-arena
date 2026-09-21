@@ -1,0 +1,9 @@
+{
+  "appId": "com.puzzlearena.ar",
+  "appName": "ساحة الألغاز",
+  "webDir": "public",
+  "server": {
+    "androidScheme": "https",
+    "cleartext": true
+  }
+}
