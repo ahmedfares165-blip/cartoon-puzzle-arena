@@ -11,4 +11,4 @@ function validName(){const name=el('name').value.trim();if(!name){toast('اكت�
 el('create').onclick=()=>{const name=validName();if(name)socket.emit('create-room',{name})};
 el('join').onclick=()=>{const name=validName(),code=el('code').value.trim();if(!code){toast('اكتب رمز الغرفة');return}if(name)socket.emit('join-room',{name,code})};
 el('leave').onclick=()=>location.reload();
-socket.on('room-ready',start);socket.on('game-start',start);socket.on('room-update',data=>{if(data.started && (!room || !room.started)) start(data); else updatePlayers(data)});socket.on('room-error',toast);socket.on('winner',r=>toast(`🏆 الفائز: ${r.winner} — ${format(r.seconds)} / ${r.moves} حركة`));
+socket.on('room-ready',start);socket.on('game-start',start);socket.on('room-update',data=>{if(data.started && (!room || !room.started)) start(data); else updatePlayers(data)});socket.on('room-error',toast);socket.on('winner',r=>{clearInterval(clock);el('board').style.pointerEvents='none';el('winnerName').textContent=r.winner;el('winnerStats').textContent=`${format(r.seconds)} • ${r.moves} حركة`;el('winnerModal').hidden=false});

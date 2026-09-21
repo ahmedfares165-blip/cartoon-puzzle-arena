@@ -39,8 +39,10 @@ io.on('connection', socket => {
   socket.on('finish', ({ moves, seconds }) => {
     const code = [...socket.rooms].find(x => rooms.has(x)), room = rooms.get(code);
     if (!room?.startedAt || room.players.get(socket.id)?.finished) return;
+    if (room.winner) return;
     const player = room.players.get(socket.id); player.finished = true;
     const result = { winner: player.name, moves: Number(moves), seconds: Number(seconds), at: Date.now() };
+    room.winner = result;
     io.to(code).emit('winner', result);
   });
   socket.on('disconnect', () => {
