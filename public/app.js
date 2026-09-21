@@ -1,5 +1,4 @@
-const nativeApp = window.Capacitor?.isNativePlatform?.() === true;
-const socket = io(nativeApp ? 'https://cartoon-puzzle-arena-ck2n.onrender.com' : undefined, {
+const socket = io('https://cartoon-puzzle-arena-ck2n.onrender.com', {
   transports: ['websocket', 'polling']
 });
 const el = id => document.getElementById(id); let room, isHost=false, order, selected, moves=0, clock;
@@ -12,8 +11,9 @@ function start(data){ if(data.isHost!==undefined)isHost=data.isHost; room=data; 
 function updatePlayers(data){const names=data.players.map(p=>p.name);el('players').textContent=`👥 ${names.length}/4`;el('waitingCount').textContent=`المتصلون: ${names.length} من 4`;el('waitingPlayers').innerHTML=names.map((name,i)=>`<span>${i===0?'👑':'●'} ${escapeHtml(name)}</span>`).join('');if(isHost&&!data.started){el('startGame').disabled=names.length<2;el('startGame').textContent=names.length<2?'بانتظار لاعب آخر':'ابدأ اللعبة الآن'}}
 function escapeHtml(text){const div=document.createElement('div');div.textContent=text;return div.innerHTML}
 function validName(){const name=el('name').value.trim();if(!name){toast('اكتب اسمك أولاً');return null}return name}
-el('create').onclick=()=>{const name=validName();if(name)socket.emit('create-room',{name})};
-el('join').onclick=()=>{const name=validName(),code=el('code').value.replace(/\D/g,'');if(code.length!==6){toast('رمز الغرفة يتكون من 6 أرقام');return}if(name)socket.emit('join-room',{name,code})};
+el('create').onclick=()=>{if(!socket.connected)return toast('جاري الاتصال بالخادم، حاول بعد لحظات');const name=validName();if(name)socket.emit('create-room',{name})};
+el('join').onclick=()=>{if(!socket.connected)return toast('جاري الاتصال بالخادم، حاول بعد لحظات');const name=validName(),code=el('code').value.replace(/\D/g,'');if(code.length!==6){toast('رمز الغرفة يتكون من 6 أرقام');return}if(name)socket.emit('join-room',{name,code})};
 el('leave').onclick=()=>location.reload();
 el('startGame').onclick=()=>socket.emit('start-room');
 socket.on('room-ready',start);socket.on('game-start',start);socket.on('room-update',data=>{if(data.started && (!room || !room.started)) start(data); else updatePlayers(data)});socket.on('room-error',toast);socket.on('winner',r=>{clearInterval(clock);el('board').style.pointerEvents='none';el('winnerName').textContent=r.winner;el('winnerStats').textContent=`${format(r.seconds)} • ${r.moves} حركة`;el('winnerModal').hidden=false});
+socket.on('connect_error',()=>toast('تعذر الاتصال بالخادم. تحقق من الإنترنت وحاول مجدداً.'));
