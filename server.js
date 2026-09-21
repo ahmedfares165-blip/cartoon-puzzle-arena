@@ -19,22 +19,25 @@ function makeCode() { return String(Math.floor(100000 + Math.random() * 900000))
 io.on('connection', socket => {
   socket.on('create-room', ({ name }) => {
     let code; do { code = makeCode(); } while (rooms.has(code));
-    const room = { code, image: images[Math.floor(Math.random() * images.length)], startedAt: null, players: new Map() };
+    const room = { code, image: images[Math.floor(Math.random() * images.length)], startedAt: null, hostId: socket.id, players: new Map() };
     room.players.set(socket.id, { name: String(name || 'لاعب').slice(0, 20), finished: false });
-    rooms.set(code, room); socket.join(code); socket.emit('room-ready', publicRoom(room));
+    rooms.set(code, room); socket.join(code); socket.emit('room-ready', { ...publicRoom(room), isHost: true });
   });
   socket.on('join-room', ({ code, name }) => {
     const room = rooms.get(String(code || '').toUpperCase());
     if (!room) return socket.emit('room-error', 'الغرفة غير موجودة.');
+    if (room.players.size >= 4) return socket.emit('room-error', 'الغرفة مكتملة (4 لاعبين).');
+    if (room.startedAt) return socket.emit('room-error', 'بدأت المباراة بالفعل. أنشئ غرفة جديدة.');
     room.players.set(socket.id, { name: String(name || 'لاعب').slice(0, 20), finished: false });
     socket.join(room.code);
-    if (!room.startedAt && room.players.size >= 2) {
-      room.startedAt = Date.now();
-      io.to(room.code).emit('game-start', publicRoom(room));
-    } else {
-      socket.emit('room-ready', publicRoom(room));
-    }
+    socket.emit('room-ready', { ...publicRoom(room), isHost: false });
     io.to(room.code).emit('room-update', publicRoom(room));
+  });
+  socket.on('start-room', () => {
+    const code = [...socket.rooms].find(x => rooms.has(x)), room = rooms.get(code);
+    if (!room || room.hostId !== socket.id || room.startedAt) return;
+    room.startedAt = Date.now();
+    io.to(room.code).emit('game-start', publicRoom(room));
   });
   socket.on('finish', ({ moves, seconds }) => {
     const code = [...socket.rooms].find(x => rooms.has(x)), room = rooms.get(code);
